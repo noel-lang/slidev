@@ -4,6 +4,7 @@ import type { CSSProperties, PropType } from 'vue'
 import { SlideBottom, SlideTop } from '#slidev/global-layers'
 import { provideLocal } from '@vueuse/core'
 import { computed, ref, toRef } from 'vue'
+import { useNav } from '../composables/useNav'
 import { injectionClicksContext, injectionCurrentPage, injectionFrontmatter, injectionRenderContext, injectionRoute, injectionSlideZoom } from '../constants'
 import { configs } from '../env'
 import { getSlideClass } from '../utils'
@@ -24,6 +25,7 @@ const props = defineProps({
 })
 
 const zoom = computed(() => props.route.meta?.slide?.frontmatter.zoom ?? 1)
+const { isPrintMode } = useNav()
 
 provideLocal(injectionRoute, props.route)
 provideLocal(injectionFrontmatter, props.route.meta.slide.frontmatter)
@@ -32,10 +34,29 @@ provideLocal(injectionRenderContext, ref(props.renderContext))
 provideLocal(injectionClicksContext, toRef(props, 'clicksContext'))
 provideLocal(injectionSlideZoom, zoom)
 
-const style = computed<CSSProperties>(() => ({
-  'user-select': configs.selectable ? undefined : 'none',
-  '--slidev-slide-zoom-scale': zoom.value === 1 ? undefined : zoom.value,
-}))
+const style = computed<CSSProperties>(() => {
+  if (zoom.value === 1) {
+    return {
+      'user-select': configs.selectable ? undefined : 'none',
+    }
+  }
+  // In print mode, use the CSS `zoom` property instead of the scale/width/height
+  // approach. The scale-and-oversize trick is only a visual transform — Chromium's
+  // print engine ignores it during pagination, so content overflows the @page box
+  // and gets clipped in the exported PDF. The `zoom` property affects the layout
+  // flow, is respected by the print engine, and fits the content into the scaled
+  // page area. See #XXXX.
+  if (isPrintMode.value) {
+    return {
+      'user-select': configs.selectable ? undefined : 'none',
+      'zoom': zoom.value,
+    }
+  }
+  return {
+    'user-select': configs.selectable ? undefined : 'none',
+    '--slidev-slide-zoom-scale': zoom.value,
+  }
+})
 </script>
 
 <template>

@@ -45,11 +45,16 @@ const style = computed<CSSProperties>(() => {
   // print engine ignores it during pagination, so content overflows the @page box
   // and gets clipped in the exported PDF. The `zoom` property affects the layout
   // flow, is respected by the print engine, and fits the content into the scaled
-  // page area. See #XXXX.
+  // page area.
   if (isPrintMode.value) {
     return {
       'user-select': configs.selectable ? undefined : 'none',
       'zoom': zoom.value,
+      // Keep `--slidev-slide-scale` in sync with the effective zoom so
+      // consumers that compensate for it (Monaco content widgets, v-mark /
+      // rough-annotation, twoslash popovers, shiki-magic-move) position
+      // correctly in the exported PDF.
+      '--slidev-slide-scale': `calc(var(--slidev-slide-container-scale, 1) * ${zoom.value})`,
     }
   }
   return {
